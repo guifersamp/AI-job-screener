@@ -61,7 +61,7 @@ ESQUEMA_JSON
   "justificativa": "string curta e objetiva"
 }
 `
-// LLM URL
+// LLM URL UPDATE
 const defaultLLMAPIURL = "https://api.siliconflow.com/v1/chat/completions"
 const defaultLLMModel = "deepseek-ai/DeepSeek-V3"
 

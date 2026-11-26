@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 )
-
+// changed linkedin url
 const linkedInGuestSearchURL = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
 const linkedInRetryAttempts = 3
 const linkedInRateLimitBaseDelay = 15 * time.Second
