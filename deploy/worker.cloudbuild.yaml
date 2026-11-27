@@ -6,7 +6,8 @@ substitutions:
   _DATABASE_URL_SECRET: jobot-database-url
   _LLM_API_KEY_SECRET: LLM_API_KEY
   _DISCORD_WEBHOOK_SECRET: DISCORD_WEBHOOK_URL
-  _LLM_MODEL: Qwen/Qwen3-8B
+  _LLM_MODEL: gemini-flash-latest
+  _LLM_API_URL: https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -35,6 +36,6 @@ steps:
       - --region
       - ${_REGION}
       - --set-env-vars
-      - LLM_MODEL=${_LLM_MODEL}
+      - LLM_MODEL=${_LLM_MODEL},LLM_API_URL=${_LLM_API_URL}
       - --set-secrets
       - DATABASE_URL=${_DATABASE_URL_SECRET}:latest,LLM_API_KEY=${_LLM_API_KEY_SECRET}:latest,DISCORD_WEBHOOK_URL=${_DISCORD_WEBHOOK_SECRET}:latest

@@ -150,7 +150,35 @@ func (p *Processor) processJob(ctx context.Context, pendingJob PendingJob) error
 	return nil
 }
 
+const linkedInMaxRetries = 3
+const linkedInBaseBackoff = 5 * time.Second
+
+var errLinkedInRateLimited = errors.New("linkedin rate limited")
+
 func (p *Processor) fetchJobDetails(ctx context.Context, jobID string) (JobDetails, error) {
+	var lastErr error
+	for attempt := 0; attempt <= linkedInMaxRetries; attempt++ {
+		if attempt > 0 {
+			if err := p.sleepBackoff(ctx, attempt); err != nil {
+				return JobDetails{}, err
+			}
+		}
+
+		details, err := p.doFetchJobDetails(ctx, jobID)
+		if err == nil {
+			return details, nil
+		}
+
+		lastErr = err
+		if !errors.Is(err, errLinkedInRateLimited) {
+			return JobDetails{}, err
+		}
+	}
+
+	return JobDetails{}, lastErr
+}
+
+func (p *Processor) doFetchJobDetails(ctx context.Context, jobID string) (JobDetails, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf(linkedInJobPostingURL, jobID), nil)
 	if err != nil {
 		return JobDetails{}, err
@@ -163,6 +191,10 @@ func (p *Processor) fetchJobDetails(ctx context.Context, jobID string) (JobDetai
 		return JobDetails{}, err
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode == http.StatusTooManyRequests {
+		return JobDetails{}, fmt.Errorf("%w: status %d", errLinkedInRateLimited, response.StatusCode)
+	}
 
 	if response.StatusCode != http.StatusOK {
 		return JobDetails{}, fmt.Errorf("linkedin details request returned status %d", response.StatusCode)
@@ -179,6 +211,17 @@ func (p *Processor) fetchJobDetails(ctx context.Context, jobID string) (JobDetai
 	}
 
 	return jobDetails, nil
+}
+
+func (p *Processor) sleepBackoff(ctx context.Context, attempt int) error {
+	backoff := linkedInBaseBackoff * time.Duration(1<<(attempt-1))
+	jitter := time.Duration(p.rand.Intn(2000)) * time.Millisecond
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(backoff + jitter):
+		return nil
+	}
 }
 
 func (p *Processor) sleepWithJitter(ctx context.Context) error {
